@@ -81,6 +81,9 @@ func partTwo() int {
 	current := freshRanges[0]
 	for i := 1; i < len(freshRanges); i++ {
 		next := freshRanges[i]
+		// example: curr: = [1-3] next = [2-4]
+		// 2 (next.start) <= 3 (current.end) + 1
+		// so [1-3], [2-4] becomes [1-4]
 		if next.start <= current.end+1 {
 			// overlapping or contiguous ranges, merge them
 			if next.end > current.end {
