@@ -142,6 +142,8 @@ func partTwo() int {
 		}
 
 		cleaned := strings.TrimSpace(num)
+		// cleaned converts the column's vertical string to a number, ignoring spaces
+		// e.g., " 4 " → "4" → 4; "431" → 431. Blank columns (only spaces) separate groups.
 		if cleaned == "" {
 			// Empty column → end of group
 			numbersLeftToRight = append(numbersLeftToRight, numbers)
