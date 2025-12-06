@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -13,19 +12,6 @@ var (
 	dataLines  []string
 	operations []string
 )
-
-// multiply multiplies together all numbers in a slice.
-// Returns nil if the slice is empty.
-func multiply(listOfNums []int) *int {
-	if len(listOfNums) == 0 {
-		return nil
-	}
-	result := listOfNums[0]
-	for _, num := range listOfNums[1:] {
-		result *= num
-	}
-	return &result
-}
 
 // calculateSum applies a sequence of operations column-wise and returns the summed result.
 // For each list of numbers in list, the corresponding operator in
@@ -38,9 +24,13 @@ func calculateSum(listOfNums [][]int, operators []string) int {
 		if i < len(operators) {
 			operator := operators[i]
 			if operator == "*" {
-				product := multiply(nums)
-				if product != nil {
-					results = append(results, *product)
+				// Multiply all numbers in the slice together
+				if len(nums) > 0 {
+					product := nums[0]
+					for _, num := range nums[1:] {
+						product *= num
+					}
+					results = append(results, product)
 				}
 			} else if operator == "+" {
 				sum := 0
@@ -85,8 +75,8 @@ func partOne() int {
 	numbersHorizontal := [][]int{}
 	for _, line := range dataLines {
 		row := []int{}
-		for _, x := range strings.Fields(line) {
-			num, _ := strconv.Atoi(x)
+		for _, num := range strings.Fields(line) {
+			num, _ := strconv.Atoi(num)
 			row = append(row, num)
 		}
 		numbersHorizontal = append(numbersHorizontal, row)
@@ -104,6 +94,11 @@ func partOne() int {
 	}
 
 	return calculateSum(numbersVertical, operations)
+}
+
+func aToIIgnoreError(s string) int {
+	result, _ := strconv.Atoi(s)
+	return result
 }
 
 // partTwo extracts numbers by reading the input grid column-by-column from right to left.
@@ -135,13 +130,17 @@ func partTwo() int {
 		// Collect characters from each row at this column position (measured from the right)
 		num := ""
 		for _, row := range dataLines {
+			//reverse due to needing right to left
 			reversed := reverseString(row)
 			if index < len(reversed) {
+				// get all the characters in this column for each and build a number from them
+				// may contain spaces at this stage, for example "  4"
 				num += string(reversed[index])
 			}
 		}
-
 		cleaned := strings.TrimSpace(num)
+		// cleaned converts the column's vertical string to a number, ignoring spaces
+		// e.g., "  4" → "4" → 4; "431" → 431. Blank columns (only spaces) separate groups.
 		if cleaned == "" {
 			// Empty column → end of group
 			numbersLeftToRight = append(numbersLeftToRight, numbers)
@@ -152,12 +151,9 @@ func partTwo() int {
 			numbers = append(numbers, val)
 			numbersLeftToRight = append(numbersLeftToRight, numbers)
 		} else {
-			val, _ := strconv.Atoi(cleaned)
-			numbers = append(numbers, val)
+			numbers = append(numbers, aToIIgnoreError(cleaned))
 		}
 	}
-
-	fmt.Println(numbersLeftToRight)
 
 	return calculateSum(numbersLeftToRight, reversedOperators)
 
