@@ -76,8 +76,7 @@ func partOne() int {
 	for _, line := range dataLines {
 		row := []int{}
 		for _, num := range strings.Fields(line) {
-			num, _ := strconv.Atoi(num)
-			row = append(row, num)
+			row = append(row, aToIIgnoreError(num))
 		}
 		numbersHorizontal = append(numbersHorizontal, row)
 	}
@@ -147,8 +146,7 @@ func partTwo() int {
 			numbers = []int{}
 		} else if index == numPositions-1 {
 			// Last column → finalize group
-			val, _ := strconv.Atoi(cleaned)
-			numbers = append(numbers, val)
+			numbers = append(numbers, aToIIgnoreError(cleaned))
 			numbersLeftToRight = append(numbersLeftToRight, numbers)
 		} else {
 			numbers = append(numbers, aToIIgnoreError(cleaned))
