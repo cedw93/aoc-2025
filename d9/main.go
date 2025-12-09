@@ -147,6 +147,7 @@ func constructPerimeter(tiles []tile) map[tile]bool {
 //	P P P P P
 //
 // The perimeter surrounds the rectangle without crossing through its interior.
+// Therefore if a tile that connects all 4 corners is deemed to be inside the rectangle, then it is no longer a valid rectangle
 // Basically for each pair of tiles along each edge of the rectangle, only 1 can be in the perimeter or its invalid
 func isValidRectangle(a, b tile, perimeter map[tile]bool) bool {
 	topLeftRow := min(a.row, b.row)
