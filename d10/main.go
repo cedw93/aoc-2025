@@ -23,14 +23,15 @@ type (
 	}
 	// We bitmask the lights, my input only had at most 13 indicators so uint16 is sufficient
 	diagram struct {
-		target        uint16
-		numIndicators int
-		buttons       []button
-		raw           string
-		fewestPresses int
-		targetString  string
-		visited       map[uint16]int
-		joltage       []int
+		target         uint16
+		numIndicators  int
+		buttons        []button
+		raw            string
+		fewestPresses  int
+		targetString   string
+		visited        map[uint16]int
+		joltage        []int
+		joltAgePresses int
 	}
 )
 
@@ -170,11 +171,7 @@ func init() {
 // Then pressing A 3 times and B 2 times gives joltage [3,5,2], but we need [3,5,4].
 // The LP solver finds the optimal combination: A=3, B=4 gives [3,7,4], which is incorrect.
 // The correct solution minimizes total presses while satisfying all joltage constraints exactly.
-func solveForJoltage(d *diagram) int {
-	if len(d.joltage) == 0 {
-		return 0
-	}
-
+func solveForJoltage(d *diagram) {
 	numButtons := len(d.buttons)
 	numJoltages := len(d.joltage)
 
@@ -211,7 +208,7 @@ func solveForJoltage(d *diagram) int {
 	status := lp.Solve()
 
 	if status != golp.OPTIMAL {
-		return 0
+		panic(fmt.Sprintf("No optimal solution found, status: %d", status))
 	}
 
 	// Get solution and sum up total presses
@@ -221,23 +218,19 @@ func solveForJoltage(d *diagram) int {
 		totalPresses += int(val + 0.5) // round to nearest integer
 	}
 
-	return totalPresses
+	d.joltAgePresses = totalPresses
 }
 
 func main() {
 	partOne := 0
+	partTwo := 0
 	for _, d := range diagrams {
 		solve(&d)
-		// fmt.Printf("%s can be solved in %d presses\n", d.targetString, d.fewestPresses)
+		solveForJoltage(&d)
 		partOne += d.fewestPresses
+		partTwo += d.joltAgePresses
 	}
 
 	println("Part One:", partOne)
-
-	partTwo := 0
-	for _, d := range diagrams {
-		presses := solveForJoltage(&d)
-		partTwo += presses
-	}
 	println("Part Two:", partTwo)
 }
