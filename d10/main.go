@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/draffensperger/golp"
 )
 
 type (
@@ -27,6 +30,7 @@ type (
 		fewestPresses int
 		targetString  string
 		visited       map[uint16]int
+		joltage       []int
 	}
 )
 
@@ -115,6 +119,15 @@ func buttonFromText(raw string) button {
 	return button{lights: lights}
 }
 
+func joltageFromText(raw string) []int {
+	joltage := []int{}
+	raw = strings.Trim(raw, "{}")
+	for _, val := range strings.Split(raw, ",") {
+		joltage = append(joltage, aToIIgnoreError(val))
+	}
+	return joltage
+}
+
 func init() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -122,9 +135,17 @@ func init() {
 		parts := strings.Fields(line)
 		targetString := parts[0]
 		buttons := []button{}
-		for _, buttonText := range parts[1 : len(parts)-1] {
-			buttons = append(buttons, buttonFromText(buttonText))
+		var joltage []int
+
+		for i := 1; i < len(parts); i++ {
+			part := parts[i]
+			if strings.HasPrefix(part, "(") {
+				buttons = append(buttons, buttonFromText(part))
+			} else if strings.HasPrefix(part, "{") {
+				joltage = joltageFromText(part)
+			}
 		}
+
 		diagrams = append(diagrams, diagram{
 			target:        stringToMask(targetString),
 			buttons:       buttons,
@@ -133,8 +154,74 @@ func init() {
 			targetString:  targetString,
 			// account for brackets
 			numIndicators: len(targetString) - 2,
+			joltage:       joltage,
 		})
 	}
+}
+
+// solveForJoltage finds the minimum number of button presses needed to achieve the desired joltage
+// for each indicator using linear programming. Each button press toggles specific indicators and
+// increases their joltage by 1.
+//
+// Example: If we want joltage [3,5,4] for indicators [0,1,2] and have buttons:
+//   - Button A toggles [0,1]
+//   - Button B toggles [1,2]
+//
+// Then pressing A 3 times and B 2 times gives joltage [3,5,2], but we need [3,5,4].
+// The LP solver finds the optimal combination: A=3, B=4 gives [3,7,4], which is incorrect.
+// The correct solution minimizes total presses while satisfying all joltage constraints exactly.
+func solveForJoltage(d *diagram) int {
+	if len(d.joltage) == 0 {
+		return 0
+	}
+
+	numButtons := len(d.buttons)
+	numJoltages := len(d.joltage)
+
+	lp := golp.NewLP(0, numButtons)
+	lp.SetVerboseLevel(golp.NEUTRAL)
+
+	// Objective for solve minimize total button presses
+	objectiveCoeffs := make([]float64, numButtons)
+	for i := range numButtons {
+		objectiveCoeffs[i] = 1.0
+	}
+	lp.SetObjFn(objectiveCoeffs)
+
+	// Set variable bounds: each button can be pressed 0 to 1000 times (integer)
+	for i := range numButtons {
+		lp.SetInt(i, true)
+		lp.SetBounds(i, 0.0, 1000.0)
+	}
+
+	for i := 0; i < numJoltages; i++ {
+		var entries []golp.Entry
+		for j, btn := range d.buttons {
+			if slices.Contains(btn.lights, i) {
+				entries = append(entries, golp.Entry{Col: j, Val: 1.0})
+			}
+		}
+		targetValue := float64(d.joltage[i])
+		if err := lp.AddConstraintSparse(entries, golp.EQ, targetValue); err != nil {
+			panic(err)
+		}
+	}
+
+	// Solve the problem using linear programming library
+	status := lp.Solve()
+
+	if status != golp.OPTIMAL {
+		return 0
+	}
+
+	// Get solution and sum up total presses
+	solution := lp.Variables()
+	totalPresses := 0
+	for _, val := range solution {
+		totalPresses += int(val + 0.5) // round to nearest integer
+	}
+
+	return totalPresses
 }
 
 func main() {
@@ -146,5 +233,11 @@ func main() {
 	}
 
 	println("Part One:", partOne)
-	println("Part Two, No idea how to do!:")
+
+	partTwo := 0
+	for _, d := range diagrams {
+		presses := solveForJoltage(&d)
+		partTwo += presses
+	}
+	println("Part Two:", partTwo)
 }
