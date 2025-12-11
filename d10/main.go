@@ -215,7 +215,8 @@ func solveForJoltage(d *diagram) {
 	solution := lp.Variables()
 	totalPresses := 0
 	for _, val := range solution {
-		totalPresses += int(val + 0.5) // round to nearest integer
+		// Round to nearest int
+		totalPresses += int(val + 0.5)
 	}
 
 	d.joltAgePresses = totalPresses
